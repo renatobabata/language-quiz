@@ -54,6 +54,12 @@ jobs:
         run: docker build --provenance=false --sbom=false -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
 
       - name: Vulnerability scan (Trivy)
+        # Pinned by commit SHA, not a mutable version tag: in March 2026,
+        # attackers force-pushed malicious commits onto 75 of 76 version tags
+        # of this action (tags 0.0.1-0.34.2), turning trusted version
+        # references into an infostealer delivery mechanism. Pinning by SHA
+        # means the exact commit is verified regardless of what any tag
+        # currently points to. Safe version: v0.35.0.
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0, verified safe commit per GHSA-69fq-xp46-6x23
         with:
           image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
