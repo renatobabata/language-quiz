@@ -1,0 +1,3 @@
+gcp_project_id           = "language-quiz-rbabata"
+ssh_public_key_path      = "~/.ssh/id_ed25519.pub"
+allowed_ssh_source_range = "0.0.0.0/0"
