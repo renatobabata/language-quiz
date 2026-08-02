@@ -1,8 +1,10 @@
 resource "google_compute_instance" "app_vm" {
   name         = "language-quiz-vm"
+  # e2-micro is the shape eligible for the GCP Always Free tier
   machine_type = "e2-micro"
   zone         = var.gcp_zone
 
+  # Always Free requires a non-preemptible instance — explicit for clarity
   scheduling {
     preemptible = false
   }
@@ -10,14 +12,17 @@ resource "google_compute_instance" "app_vm" {
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2404-lts-amd64"
-      type  = "pd-standard"
-      size  = 30
+      # Standard (non-SSD) disk to stay within the Always Free 30GB limit
+      type = "pd-standard"
+      size = 30
     }
   }
 
   network_interface {
     network = "default"
     access_config {
+      # empty block = ephemeral public IP (required for the app to be reachable,
+      # and avoids the cost of a reserved static IP)
     }
   }
 
