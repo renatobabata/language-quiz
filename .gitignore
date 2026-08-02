@@ -1,0 +1,33 @@
+# Secrets - NEVER commit
+.env
+.env.*
+!.env.example
+*.tfvars
+!*.tfvars.example
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local database
+*.db
+*.sqlite3
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docker
+*.log
