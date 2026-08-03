@@ -1,12 +1,6 @@
-import os
+from fastapi.testclient import TestClient
 
-os.environ.setdefault("GEMINI_API_KEY", "test-key-fake")
-os.environ.setdefault("GROQ_API_KEY", "test-key-fake")
-os.environ.setdefault("DATABASE_URL", "sqlite:///./data/test_texts.db")
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.main import app  # noqa: E402
+from app.main import app
 
 client = TestClient(app)
 
