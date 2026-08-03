@@ -14,8 +14,10 @@ from app.ai.exceptions import (
 from app.ai.factory import available_providers, get_ai_provider
 from app.config import settings
 from app.database import engine, get_db
+from app.exercises.quiz import INSTRUCTIONS as QUIZ_INSTRUCTIONS
+from app.exercises.quiz import check_answer, generate_quiz, score_attempt
 from app.language import detect_language, is_cjk
-from app.models import Base, Text
+from app.models import Base, Exercise, ExerciseAttempt, Text
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -52,14 +54,18 @@ async def provider_not_configured_handler(
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
-class AIPingRequest(BaseModel):
-    provider: str
-    prompt: str = 'Reply with a short JSON object: {"status": "ok"}'
-
-
 class TextCreate(BaseModel):
     content: str
     ai_provider: str
+
+
+class AnswerCheck(BaseModel):
+    question_index: int
+    answer_index: int
+
+
+class AttemptSubmit(BaseModel):
+    answers: list[int]
 
 
 @app.get("/health")
@@ -72,17 +78,6 @@ def health() -> dict:
 def list_providers() -> dict:
     """Lists AI provider names, used to populate the frontend selector (Phase 6)."""
     return {"providers": available_providers()}
-
-
-@app.post("/ai/ping")
-def ai_ping(payload: AIPingRequest) -> dict:
-    """Temporary manual-testing endpoint for the AI abstraction layer.
-
-    Will be removed once the real exercise-generation endpoints exist.
-    """
-    provider = get_ai_provider(payload.provider)
-    result = provider.generate_json(payload.prompt)
-    return {"provider": provider.name, "result": result}
 
 
 @app.post("/texts")
@@ -112,12 +107,94 @@ def create_text(payload: TextCreate, db: Session = Depends(get_db)) -> dict:
 
 @app.get("/texts/{text_id}")
 def get_text(text_id: int, db: Session = Depends(get_db)) -> dict:
-    text = db.query(Text).filter(Text.id == text_id).first()
-    if not text:
-        raise HTTPException(status_code=404, detail="Text not found")
+    text = _get_text_or_404(text_id, db)
     return {
         "id": text.id,
         "content": text.content,
         "language": text.language,
         "ai_provider": text.ai_provider,
     }
+
+
+def _get_text_or_404(text_id: int, db: Session) -> Text:
+    text = db.query(Text).filter(Text.id == text_id).first()
+    if not text:
+        raise HTTPException(status_code=404, detail="Text not found")
+    return text
+
+
+def _get_exercise_or_404(exercise_id: int, db: Session) -> Exercise:
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return exercise
+
+
+@app.post("/texts/{text_id}/exercises/quiz")
+def create_quiz_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
+    text = _get_text_or_404(text_id, db)
+    provider = get_ai_provider(text.ai_provider)
+
+    questions = generate_quiz(text.content, provider)
+
+    exercise = Exercise(
+        text_id=text.id,
+        type="quiz",
+        instructions=QUIZ_INSTRUCTIONS,
+        data={"questions": questions},
+    )
+    db.add(exercise)
+    db.commit()
+    db.refresh(exercise)
+
+    # The correct_index is stripped from the response the student sees, so
+    # they can't inspect it in the browser network tab before answering.
+    questions_without_answers = [
+        {"question": q["question"], "options": q["options"]} for q in questions
+    ]
+
+    return {
+        "exercise_id": exercise.id,
+        "type": "quiz",
+        "instructions": exercise.instructions,
+        "questions": questions_without_answers,
+    }
+
+
+@app.post("/exercises/{exercise_id}/answer")
+def answer_quiz_question(
+    exercise_id: int, payload: AnswerCheck, db: Session = Depends(get_db)
+) -> dict:
+    """Immediate per-question feedback: checks a single answer and tells the
+    student right away whether it was correct, without ending the exercise."""
+    exercise = _get_exercise_or_404(exercise_id, db)
+    if exercise.type != "quiz":
+        raise HTTPException(status_code=400, detail="This exercise is not a quiz")
+
+    questions = exercise.data["questions"]
+    if not (0 <= payload.question_index < len(questions)):
+        raise HTTPException(status_code=400, detail="Invalid question_index")
+
+    return check_answer(questions, payload.question_index, payload.answer_index)
+
+
+@app.post("/exercises/{exercise_id}/attempt")
+def submit_quiz_attempt(
+    exercise_id: int, payload: AttemptSubmit, db: Session = Depends(get_db)
+) -> dict:
+    """Records the full set of answers once the student finishes the quiz.
+    This is what feeds the final results chart across all exercise types."""
+    exercise = _get_exercise_or_404(exercise_id, db)
+    if exercise.type != "quiz":
+        raise HTTPException(status_code=400, detail="This exercise is not a quiz")
+
+    questions = exercise.data["questions"]
+    score, total = score_attempt(questions, payload.answers)
+
+    attempt = ExerciseAttempt(
+        exercise_id=exercise.id, score=score, total=total, answers={"submitted": payload.answers}
+    )
+    db.add(attempt)
+    db.commit()
+
+    return {"score": score, "total": total}
