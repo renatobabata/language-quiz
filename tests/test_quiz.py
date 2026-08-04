@@ -84,7 +84,7 @@ def test_quiz_answer_and_attempt_flow(monkeypatch):
     # Immediate per-question feedback
     answer_response = client.post(
         f"/exercises/{exercise_id}/answer",
-        json={"question_index": 0, "answer_index": 0},
+        json={"item_index": 0, "answer": 0},
     )
     assert answer_response.status_code == 200
     assert answer_response.json()["correct"] is True
@@ -114,6 +114,6 @@ def test_answer_invalid_question_index_returns_400(monkeypatch):
 
     response = client.post(
         f"/exercises/{exercise['exercise_id']}/answer",
-        json={"question_index": 99, "answer_index": 0},
+        json={"item_index": 99, "answer": 0},
     )
     assert response.status_code == 400

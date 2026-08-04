@@ -14,8 +14,11 @@ from app.ai.exceptions import (
 from app.ai.factory import available_providers, get_ai_provider
 from app.config import settings
 from app.database import engine, get_db
+from app.exercises.cloze import INSTRUCTIONS as CLOZE_INSTRUCTIONS
+from app.exercises.cloze import generate_cloze
 from app.exercises.quiz import INSTRUCTIONS as QUIZ_INSTRUCTIONS
-from app.exercises.quiz import check_answer, generate_quiz, score_attempt
+from app.exercises.quiz import generate_quiz
+from app.exercises.registry import EXERCISE_TYPES
 from app.language import detect_language, is_cjk
 from app.models import Base, Exercise, ExerciseAttempt, Text
 
@@ -60,12 +63,12 @@ class TextCreate(BaseModel):
 
 
 class AnswerCheck(BaseModel):
-    question_index: int
-    answer_index: int
+    item_index: int
+    answer: int | str
 
 
 class AttemptSubmit(BaseModel):
-    answers: list[int]
+    answers: list[int | str]
 
 
 @app.get("/health")
@@ -147,8 +150,8 @@ def create_quiz_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
     db.commit()
     db.refresh(exercise)
 
-    # The correct_index is stripped from the response the student sees, so
-    # they can't inspect it in the browser network tab before answering.
+    # correct_index is stripped from the response so the student can't
+    # inspect it in the browser network tab before answering.
     questions_without_answers = [
         {"question": q["question"], "options": q["options"]} for q in questions
     ]
@@ -161,35 +164,71 @@ def create_quiz_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
     }
 
 
+@app.post("/texts/{text_id}/exercises/cloze")
+def create_cloze_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
+    text = _get_text_or_404(text_id, db)
+    provider = get_ai_provider(text.ai_provider)
+
+    sentences = generate_cloze(text.content, provider)
+
+    exercise = Exercise(
+        text_id=text.id,
+        type="cloze",
+        instructions=CLOZE_INSTRUCTIONS,
+        data={"sentences": sentences},
+    )
+    db.add(exercise)
+    db.commit()
+    db.refresh(exercise)
+
+    # The answer is stripped from the response for the same reason as quiz.
+    sentences_without_answers = [{"sentence": s["sentence"], "hint": s["hint"]} for s in sentences]
+
+    return {
+        "exercise_id": exercise.id,
+        "type": "cloze",
+        "instructions": exercise.instructions,
+        "sentences": sentences_without_answers,
+    }
+
+
 @app.post("/exercises/{exercise_id}/answer")
-def answer_quiz_question(
+def answer_exercise_item(
     exercise_id: int, payload: AnswerCheck, db: Session = Depends(get_db)
 ) -> dict:
-    """Immediate per-question feedback: checks a single answer and tells the
-    student right away whether it was correct, without ending the exercise."""
+    """Immediate per-item feedback, generic across exercise types: checks a
+    single answer and tells the student right away whether it was correct,
+    without ending the exercise."""
     exercise = _get_exercise_or_404(exercise_id, db)
-    if exercise.type != "quiz":
-        raise HTTPException(status_code=400, detail="This exercise is not a quiz")
+    config = EXERCISE_TYPES.get(exercise.type)
+    if config is None:
+        raise HTTPException(
+            status_code=400, detail=f"Exercise type '{exercise.type}' does not support answers"
+        )
 
-    questions = exercise.data["questions"]
-    if not (0 <= payload.question_index < len(questions)):
-        raise HTTPException(status_code=400, detail="Invalid question_index")
+    items = exercise.data[config["data_key"]]
+    if not (0 <= payload.item_index < len(items)):
+        raise HTTPException(status_code=400, detail="Invalid item_index")
 
-    return check_answer(questions, payload.question_index, payload.answer_index)
+    return config["check_answer"](items, payload.item_index, payload.answer)
 
 
 @app.post("/exercises/{exercise_id}/attempt")
-def submit_quiz_attempt(
+def submit_exercise_attempt(
     exercise_id: int, payload: AttemptSubmit, db: Session = Depends(get_db)
 ) -> dict:
-    """Records the full set of answers once the student finishes the quiz.
-    This is what feeds the final results chart across all exercise types."""
+    """Records the full set of answers once the student finishes an
+    exercise. This is what feeds the final results chart across all
+    exercise types (Phase 5, final step)."""
     exercise = _get_exercise_or_404(exercise_id, db)
-    if exercise.type != "quiz":
-        raise HTTPException(status_code=400, detail="This exercise is not a quiz")
+    config = EXERCISE_TYPES.get(exercise.type)
+    if config is None:
+        raise HTTPException(
+            status_code=400, detail=f"Exercise type '{exercise.type}' does not support attempts"
+        )
 
-    questions = exercise.data["questions"]
-    score, total = score_attempt(questions, payload.answers)
+    items = exercise.data[config["data_key"]]
+    score, total = config["score_attempt"](items, payload.answers)
 
     attempt = ExerciseAttempt(
         exercise_id=exercise.id, score=score, total=total, answers={"submitted": payload.answers}

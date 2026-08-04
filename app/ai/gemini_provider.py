@@ -36,7 +36,7 @@ class GeminiProvider(AIProvider):
                 wait_seconds = self._extract_retry_delay(e) or _DEFAULT_RETRY_SECONDS
                 if attempt > _MAX_RETRIES:
                     raise AIRateLimitError(
-                        f"Gemini rate limit exceeded. Wait about {wait_seconds}s and try again."
+                        "Gemini rate limit exceeded. " f"Wait about {wait_seconds}s and try again."
                     ) from e
                 logger.warning("Gemini rate limit hit, retrying in %ds...", wait_seconds)
                 time.sleep(wait_seconds)
