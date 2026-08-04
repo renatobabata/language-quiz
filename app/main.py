@@ -16,6 +16,8 @@ from app.config import settings
 from app.database import engine, get_db
 from app.exercises.cloze import INSTRUCTIONS as CLOZE_INSTRUCTIONS
 from app.exercises.cloze import generate_cloze
+from app.exercises.flashcard import generate_flashcards
+from app.exercises.flashcard import get_instructions as get_flashcard_instructions
 from app.exercises.quiz import INSTRUCTIONS as QUIZ_INSTRUCTIONS
 from app.exercises.quiz import generate_quiz
 from app.exercises.registry import EXERCISE_TYPES
@@ -189,6 +191,34 @@ def create_cloze_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
         "type": "cloze",
         "instructions": exercise.instructions,
         "sentences": sentences_without_answers,
+    }
+
+
+@app.post("/texts/{text_id}/exercises/flashcards")
+def create_flashcard_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
+    text = _get_text_or_404(text_id, db)
+    provider = get_ai_provider(text.ai_provider)
+
+    cards = generate_flashcards(text.content, provider, text.language)
+    instructions = get_flashcard_instructions(text.language)
+
+    exercise = Exercise(
+        text_id=text.id,
+        type="flashcard",
+        instructions=instructions,
+        data={"cards": cards},
+    )
+    db.add(exercise)
+    db.commit()
+    db.refresh(exercise)
+
+    cards_without_answers = [{"word": c["word"], "options": c["options"]} for c in cards]
+
+    return {
+        "exercise_id": exercise.id,
+        "type": "flashcard",
+        "instructions": exercise.instructions,
+        "cards": cards_without_answers,
     }
 
 

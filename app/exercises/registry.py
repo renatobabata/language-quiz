@@ -19,4 +19,11 @@ EXERCISE_TYPES: dict[str, dict] = {
         "check_answer": cloze.check_answer,
         "score_attempt": cloze.score_attempt,
     },
+    "flashcard": {
+        # Same shape as quiz questions ({options, correct_index}), so the
+        # quiz check/score functions are reused as-is instead of duplicated.
+        "data_key": "cards",
+        "check_answer": quiz.check_answer,
+        "score_attempt": quiz.score_attempt,
+    },
 }
