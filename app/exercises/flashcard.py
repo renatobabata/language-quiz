@@ -2,7 +2,8 @@ from app.ai.base import AIProvider
 from app.language import is_cjk
 
 READING_INSTRUCTIONS = (
-    "For each flashcard, choose the correct reading of the highlighted word among the four options."
+    "For each flashcard, choose the correct reading of the highlighted word "
+    "among the four options."
 )
 
 SYNONYM_INSTRUCTIONS = (

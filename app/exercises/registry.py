@@ -6,7 +6,7 @@ instead of being duplicated for every exercise type (quiz, cloze, and the
 flashcard/crossword types coming next).
 """
 
-from app.exercises import cloze, quiz
+from app.exercises import cloze, crossword, quiz
 
 EXERCISE_TYPES: dict[str, dict] = {
     "quiz": {
@@ -25,5 +25,10 @@ EXERCISE_TYPES: dict[str, dict] = {
         "data_key": "cards",
         "check_answer": quiz.check_answer,
         "score_attempt": quiz.score_attempt,
+    },
+    "crossword": {
+        "data_key": "words",
+        "check_answer": crossword.check_answer,
+        "score_attempt": crossword.score_attempt,
     },
 }

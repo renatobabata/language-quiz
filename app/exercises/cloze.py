@@ -14,8 +14,8 @@ missing word itself, an obvious synonym, or a direct translation of it.
 Respond with ONLY valid JSON, no markdown, in this exact format:
 
 [
-  {{"sentence": "The cat climbed onto the ___.", "hint": "Where you sleep at night",
-    "answer": "bed"}}
+  {{"sentence": "The cat climbed onto the ___.",
+  "hint": "Where you sleep at night", "answer": "bed"}}
 ]
 
 Text:

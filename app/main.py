@@ -16,6 +16,8 @@ from app.config import settings
 from app.database import engine, get_db
 from app.exercises.cloze import INSTRUCTIONS as CLOZE_INSTRUCTIONS
 from app.exercises.cloze import generate_cloze
+from app.exercises.crossword import INSTRUCTIONS as CROSSWORD_INSTRUCTIONS
+from app.exercises.crossword import build_crossword_data, generate_crossword_words
 from app.exercises.flashcard import generate_flashcards
 from app.exercises.flashcard import get_instructions as get_flashcard_instructions
 from app.exercises.quiz import INSTRUCTIONS as QUIZ_INSTRUCTIONS
@@ -219,6 +221,47 @@ def create_flashcard_exercise(text_id: int, db: Session = Depends(get_db)) -> di
         "type": "flashcard",
         "instructions": exercise.instructions,
         "cards": cards_without_answers,
+    }
+
+
+@app.post("/texts/{text_id}/exercises/crossword")
+def create_crossword_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
+    text = _get_text_or_404(text_id, db)
+    provider = get_ai_provider(text.ai_provider)
+
+    words = generate_crossword_words(text.content, provider)
+    grid_data = build_crossword_data(words)
+
+    exercise = Exercise(
+        text_id=text.id,
+        type="crossword",
+        instructions=CROSSWORD_INSTRUCTIONS,
+        data=grid_data,
+    )
+    db.add(exercise)
+    db.commit()
+    db.refresh(exercise)
+
+    # The answer word itself is stripped from each clue before returning.
+    words_without_answers = [
+        {
+            "clue": w["clue"],
+            "row": w["row"],
+            "col": w["col"],
+            "direction": w["direction"],
+            "number": w["number"],
+            "length": len(w["word"]),
+        }
+        for w in grid_data["words"]
+    ]
+
+    return {
+        "exercise_id": exercise.id,
+        "type": "crossword",
+        "instructions": exercise.instructions,
+        "height": grid_data["height"],
+        "width": grid_data["width"],
+        "words": words_without_answers,
     }
 
 
