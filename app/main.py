@@ -310,3 +310,44 @@ def submit_exercise_attempt(
     db.commit()
 
     return {"score": score, "total": total}
+
+
+@app.get("/texts/{text_id}/results")
+def get_text_results(text_id: int, db: Session = Depends(get_db)) -> dict:
+    """Aggregates the most recent attempt of each exercise generated for a
+    text, across all 4 exercise types. This is what feeds the final results
+    chart once the student finishes studying a text."""
+    _get_text_or_404(text_id, db)
+
+    exercises = db.query(Exercise).filter(Exercise.text_id == text_id).all()
+
+    breakdown = []
+    for exercise in exercises:
+        latest_attempt = (
+            db.query(ExerciseAttempt)
+            .filter(ExerciseAttempt.exercise_id == exercise.id)
+            .order_by(ExerciseAttempt.created_at.desc())
+            .first()
+        )
+        # Exercises the student hasn't attempted yet are left out of the
+        # chart rather than reported as a zero score.
+        if latest_attempt is None:
+            continue
+        breakdown.append(
+            {
+                "exercise_id": exercise.id,
+                "type": exercise.type,
+                "score": latest_attempt.score,
+                "total": latest_attempt.total,
+            }
+        )
+
+    overall_score = sum(item["score"] for item in breakdown)
+    overall_total = sum(item["total"] for item in breakdown)
+
+    return {
+        "text_id": text_id,
+        "exercises": breakdown,
+        "overall_score": overall_score,
+        "overall_total": overall_total,
+    }
