@@ -47,7 +47,3 @@ project board, Epic 3).
 - [Architecture overview](docs/architecture.md)
 - [Architecture Decision Records](docs/adr/)
 - [Contributing guide](CONTRIBUTING.md)
-
-## License
-
-MIT — see [LICENSE](LICENSE).

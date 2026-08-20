@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Language Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EDEFEA;
+    --paper-raised: #F7F8F5;
+    --ink: #1F2A3C;
+    --ink-soft: #4C5A6E;
+    --rule: #C7CCC3;
+    --red: #C0392B;
+    --green: #2F6F4F;
+    --gold: #D9A441;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: 'Source Serif 4', serif; margin: 0; }
+  .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .shell { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+  header.top { border-bottom: 2px solid var(--ink); padding-bottom: 16px; margin-bottom: 32px; }
+  header.top h1 { font-size: 2.1rem; font-weight: 700; }
+  header.top p { color: var(--ink-soft); margin-top: 6px; }
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    padding: 14px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+    resize: vertical;
+  }
+  .provider-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .provider-btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px;
+    border: 1.5px solid var(--ink);
+    background: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .provider-btn.active { background: var(--ink); color: var(--paper); }
+  button.primary {
+    margin-top: 20px;
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 14px 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 0.85rem;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    padding: 10px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .exercise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 8px; }
+  .exercise-tile {
+    border: 1.5px dashed var(--rule);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: left;
+    background: #fff;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .exercise-tile.done { border-style: solid; border-color: var(--green); color: var(--green); }
+  .exercise-tile:disabled { opacity: 0.4; cursor: not-allowed; }
+  .instructions {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    border-left: 3px solid var(--gold);
+    padding-left: 12px;
+    margin-bottom: 20px;
+  }
+  .item { border-bottom: 1px solid var(--rule); padding: 16px 0; }
+  .item:last-child { border-bottom: none; }
+  .item .stem { font-size: 1.02rem; margin-bottom: 10px; }
+  .option-row { display: flex; flex-direction: column; gap: 8px; }
+  .option-btn {
+    text-align: left;
+    padding: 10px 14px;
+    border: 1px solid var(--rule);
+    background: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct { border-color: var(--green); background: #eaf3ee; color: var(--green); font-weight: 600; }
+  .option-btn.incorrect { border-color: var(--red); background: #fbeceb; color: var(--red); text-decoration: line-through; }
+  .fill-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .fill-row input[type=text] {
+    padding: 9px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    font-size: 0.95rem;
+    min-width: 160px;
+  }
+  .feedback-mark { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 600; }
+  .feedback-mark.correct { color: var(--green); }
+  .feedback-mark.incorrect { color: var(--red); }
+  .hint { color: var(--ink-soft); font-size: 0.85rem; margin-left: 4px; }
+  .finish-row { margin-top: 20px; }
+  .score-pill {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-left: 10px;
+  }
+  .score-pill.good { background: #eaf3ee; color: var(--green); }
+  .score-pill.bad { background: #fbeceb; color: var(--red); }
+  .chart-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .chart-label { width: 110px; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; text-transform: uppercase; }
+  .chart-track { flex: 1; height: 18px; background: #e2e5de; border-radius: 3px; overflow: hidden; }
+  .chart-fill { height: 100%; background: var(--green); }
+  .chart-fig { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; width: 60px; text-align: right; }
+  .error-banner {
+    background: #fbeceb;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 12px 14px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+  .muted { color: var(--ink-soft); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-type="module">
+const { useState } = React;
+
+const EXERCISE_TYPES = [
+  { key: "quiz", label: "Quiz" },
+  { key: "cloze", label: "Fill in the blank" },
+  { key: "flashcards", label: "Flashcards" },
+  { key: "crossword", label: "Crossword" },
+];
+
+async function api(path, options) {
+  const res = await fetch(path, {
+    method: options?.method || "GET",
+    headers: options?.body ? { "Content-Type": "application/json" } : undefined,
+    body: options?.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Something went wrong.");
+  }
+  return data;
+}
+
+function ErrorBanner({ message }) {
+  if (!message) return null;
+  return <div className="error-banner">{message}</div>;
+}
+
+function TextForm({ onCreated }) {
+  const [content, setContent] = useState("");
+  const [provider, setProvider] = useState("gemini");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function submit() {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await api("/texts", {
+        method: "POST",
+        body: { content, ai_provider: provider },
+      });
+      onCreated({ ...result, content });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <p className="label">Step 1 — paste a text</p>
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Paste any text here (at least 20 characters)..."
+      />
+      <p className="label" style={{ marginTop: 18 }}>Choose an AI provider</p>
+      <div className="provider-row">
+        {["gemini", "groq"].map((p) => (
+          <button
+            key={p}
+            className={"provider-btn" + (provider === p ? " active" : "")}
+            onClick={() => setProvider(p)}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      <ErrorBanner message={error} />
+      <button className="primary" disabled={loading || content.trim().length < 20} onClick={submit}>
+        {loading ? "Submitting..." : "Submit text"}
+      </button>
+    </div>
+  );
+}
+
+function MultipleChoiceItem({ item, index, exerciseId, onAnswered }) {
+  const [checked, setChecked] = useState(null); // {correct, correct_index}
+  const [error, setError] = useState(null);
+
+  async function pick(optionIndex) {
+    if (checked) return;
+    try {
+      const result = await api(`/exercises/${exerciseId}/answer`, {
+        method: "POST",
+        body: { item_index: index, answer: optionIndex },
+      });
+      setChecked({ ...result, picked: optionIndex });
+      onAnswered(index, optionIndex);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div className="item">
+      <p className="stem">{index + 1}. {item.question || item.word}</p>
+      <div className="option-row">
+        {item.options.map((opt, i) => {
+          let cls = "option-btn";
+          if (checked) {
+            if (i === checked.correct_index) cls += " correct";
+            else if (i === checked.picked) cls += " incorrect";
+          }
+          return (
+            <button key={i} className={cls} disabled={!!checked} onClick={() => pick(i)}>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+      <ErrorBanner message={error} />
+    </div>
+  );
+}
+
+function ClozeItem({ item, index, exerciseId, onAnswered }) {
+  const [value, setValue] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function submit() {
+    if (checked || !value.trim()) return;
+    try {
+      const result = await api(`/exercises/${exerciseId}/answer`, {
+        method: "POST",
+        body: { item_index: index, answer: value },
+      });
+      setChecked(result);
+      onAnswered(index, value);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div className="item">
+      <p className="stem">{index + 1}. {item.sentence} <span className="hint">({item.hint})</span></p>
+      <div className="fill-row">
+        <input
+          type="text"
+          value={value}
+          disabled={!!checked}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
+        <button className="secondary" disabled={!!checked} onClick={submit}>Check</button>
+        {checked && (
+          <span className={"feedback-mark " + (checked.correct ? "correct" : "incorrect")}>
+            {checked.correct ? "✓ correct" : `✗ correct answer: ${checked.correct_answer}`}
+          </span>
+        )}
+      </div>
+      <ErrorBanner message={error} />
+    </div>
+  );
+}
+
+function CrosswordItem({ item, index, exerciseId, onAnswered }) {
+  const [value, setValue] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function submit() {
+    if (checked || !value.trim()) return;
+    try {
+      const result = await api(`/exercises/${exerciseId}/answer`, {
+        method: "POST",
+        body: { item_index: index, answer: value },
+      });
+      setChecked(result);
+      onAnswered(index, value);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div className="item">
+      <p className="stem">
+        {item.number}. {item.clue} <span className="hint">({item.length} letters, {item.direction})</span>
+      </p>
+      <div className="fill-row">
+        <input
+          type="text"
+          value={value}
+          disabled={!!checked}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
+        <button className="secondary" disabled={!!checked} onClick={submit}>Check</button>
+        {checked && (
+          <span className={"feedback-mark " + (checked.correct ? "correct" : "incorrect")}>
+            {checked.correct ? "✓ correct" : `✗ correct answer: ${checked.correct_word}`}
+          </span>
+        )}
+      </div>
+      <ErrorBanner message={error} />
+    </div>
+  );
+}
+
+function ExerciseView({ type, exercise, onFinished }) {
+  const items = exercise.questions || exercise.sentences || exercise.cards || exercise.words;
+  const [answers, setAnswers] = useState({});
+  const [finished, setFinished] = useState(null);
+  const [error, setError] = useState(null);
+
+  function recordAnswer(index, value) {
+    setAnswers((prev) => ({ ...prev, [index]: value }));
+  }
+
+  async function finish() {
+    const ordered = items.map((_, i) => answers[i] ?? "");
+    try {
+      const result = await api(`/exercises/${exercise.exercise_id}/attempt`, {
+        method: "POST",
+        body: { answers: ordered },
+      });
+      setFinished(result);
+      onFinished(exercise.exercise_id, result);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  const allAnswered = items && Object.keys(answers).length === items.length;
+
+  return (
+    <div className="card">
+      <h3>{EXERCISE_TYPES.find((t) => t.key === type)?.label}</h3>
+      <p className="instructions">{exercise.instructions}</p>
+      {items.map((item, i) => {
+        if (type === "quiz" || type === "flashcards") {
+          return <MultipleChoiceItem key={i} item={item} index={i} exerciseId={exercise.exercise_id} onAnswered={recordAnswer} />;
+        }
+        if (type === "cloze") {
+          return <ClozeItem key={i} item={item} index={i} exerciseId={exercise.exercise_id} onAnswered={recordAnswer} />;
+        }
+        return <CrosswordItem key={i} item={item} index={i} exerciseId={exercise.exercise_id} onAnswered={recordAnswer} />;
+      })}
+      <ErrorBanner message={error} />
+      <div className="finish-row">
+        {!finished ? (
+          <button className="primary" disabled={!allAnswered} onClick={finish}>
+            Finish exercise
+          </button>
+        ) : (
+          <span className={"score-pill " + (finished.score === finished.total ? "good" : "bad")}>
+            {finished.score} / {finished.total} correct
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResultsChart({ results }) {
+  if (!results.exercises.length) {
+    return <p className="muted">No exercises completed yet.</p>;
+  }
+  return (
+    <div className="card">
+      <h3>Results</h3>
+      <p className="muted" style={{ marginBottom: 18 }}>
+        Overall: {results.overall_score} / {results.overall_total} correct
+      </p>
+      {results.exercises.map((ex) => {
+        const pct = ex.total ? Math.round((ex.score / ex.total) * 100) : 0;
+        return (
+          <div className="chart-row" key={ex.exercise_id}>
+            <span className="chart-label">{ex.type}</span>
+            <div className="chart-track">
+              <div className="chart-fill" style={{ width: pct + "%" }}></div>
+            </div>
+            <span className="chart-fig">{ex.score}/{ex.total}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function StudySession({ text }) {
+  const [exercises, setExercises] = useState({});
+  const [loadingType, setLoadingType] = useState(null);
+  const [error, setError] = useState(null);
+  const [results, setResults] = useState(null);
+
+  async function generate(type) {
+    setError(null);
+    setLoadingType(type);
+    try {
+      const result = await api(`/texts/${text.id}/exercises/${type}`, { method: "POST" });
+      setExercises((prev) => ({ ...prev, [type]: result }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoadingType(null);
+    }
+  }
+
+  async function loadResults() {
+    setError(null);
+    try {
+      const result = await api(`/texts/${text.id}/results`);
+      setResults(result);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <p className="label">Step 2 — generate exercises</p>
+        <div className="exercise-grid">
+          {EXERCISE_TYPES.map((t) => {
+            const disabled = t.key === "flashcards" && false; // flashcards work for every language
+            const done = !!exercises[t.key];
+            return (
+              <button
+                key={t.key}
+                className={"exercise-tile" + (done ? " done" : "")}
+                disabled={disabled || loadingType === t.key}
+                onClick={() => generate(t.key)}
+              >
+                {loadingType === t.key ? "Generating..." : done ? `✓ ${t.label}` : `Generate ${t.label}`}
+              </button>
+            );
+          })}
+        </div>
+        <ErrorBanner message={error} />
+      </div>
+
+      {EXERCISE_TYPES.map((t) =>
+        exercises[t.key] ? (
+          <ExerciseView key={t.key} type={t.key} exercise={exercises[t.key]} onFinished={() => {}} />
+        ) : null
+      )}
+
+      <div className="card">
+        <p className="label">Step 3 — see how you did</p>
+        <button className="secondary" onClick={loadResults}>Show results chart</button>
+        {results && <div style={{ marginTop: 18 }}><ResultsChart results={results} /></div>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [text, setText] = useState(null);
+
+  return (
+    <div className="shell">
+      <header className="top">
+        <h1>Language Quiz</h1>
+        <p>Paste a text, pick an AI provider, and practice with four kinds of exercises.</p>
+      </header>
+      {!text ? <TextForm onCreated={setText} /> : <StudySession text={text} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

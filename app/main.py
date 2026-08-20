@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -79,6 +79,11 @@ class AttemptSubmit(BaseModel):
 def health() -> dict:
     """Liveness check, used by monitoring and by the CI smoke test."""
     return {"status": "ok", "environment": settings.environment}
+
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    return FileResponse("app/static/index.html")
 
 
 @app.get("/ai/providers")
