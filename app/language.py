@@ -24,3 +24,10 @@ def detect_language(text: str) -> str:
 def is_cjk(language: str) -> bool:
     """Whether the language supports kanji/hanzi flashcard exercises."""
     return language in CJK_LANGUAGES
+
+
+def supports_crossword(language: str) -> bool:
+    """Chinese text doesn't fit the crossword's letter-by-letter grid model
+    the way Japanese (via hiragana readings) or Latin-script languages do,
+    so the crossword exercise is disabled specifically for zh-cn/zh-tw."""
+    return language not in {"zh-cn", "zh-tw"}

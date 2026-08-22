@@ -23,7 +23,7 @@ from app.exercises.flashcard import get_instructions as get_flashcard_instructio
 from app.exercises.quiz import INSTRUCTIONS as QUIZ_INSTRUCTIONS
 from app.exercises.quiz import generate_quiz
 from app.exercises.registry import EXERCISE_TYPES
-from app.language import detect_language, is_cjk
+from app.language import detect_language, is_cjk, supports_crossword
 from app.models import Base, Exercise, ExerciseAttempt, Text
 
 logging.basicConfig(level=settings.log_level)
@@ -114,6 +114,7 @@ def create_text(payload: TextCreate, db: Session = Depends(get_db)) -> dict:
         "language": text.language,
         "ai_provider": text.ai_provider,
         "supports_kanji_flashcards": is_cjk(text.language),
+        "supports_crossword": supports_crossword(text.language),
     }
 
 
@@ -232,6 +233,11 @@ def create_flashcard_exercise(text_id: int, db: Session = Depends(get_db)) -> di
 @app.post("/texts/{text_id}/exercises/crossword")
 def create_crossword_exercise(text_id: int, db: Session = Depends(get_db)) -> dict:
     text = _get_text_or_404(text_id, db)
+    if not supports_crossword(text.language):
+        raise HTTPException(
+            status_code=400,
+            detail="Crossword puzzles are not supported for Chinese texts",
+        )
     provider = get_ai_provider(text.ai_provider)
 
     words = generate_crossword_words(text.content, provider)

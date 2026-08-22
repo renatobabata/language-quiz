@@ -111,3 +111,17 @@ def test_crossword_answer_and_attempt_flow(monkeypatch):
     )
     assert attempt_response.status_code == 200
     assert attempt_response.json()["total"] == 2
+
+
+def test_create_crossword_exercise_rejects_chinese_text():
+    created_text = client.post(
+        "/texts",
+        json={
+            "content": "你好，今天天气很好，我们去公园散步吧。晚上我们一起吃饭吧.",
+            "ai_provider": "gemini",
+        },
+    ).json()
+
+    response = client.post(f"/texts/{created_text['id']}/exercises/crossword")
+
+    assert response.status_code == 400

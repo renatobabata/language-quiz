@@ -503,16 +503,23 @@ function StudySession({ text }) {
         <p className="label">Step 2 — generate exercises</p>
         <div className="exercise-grid">
           {EXERCISE_TYPES.map((t) => {
-            const disabled = t.key === "flashcards" && false; // flashcards work for every language
+            const unsupported = t.key === "crossword" && text.supports_crossword === false;
             const done = !!exercises[t.key];
             return (
               <button
                 key={t.key}
                 className={"exercise-tile" + (done ? " done" : "")}
-                disabled={disabled || loadingType === t.key}
+                disabled={unsupported || loadingType === t.key}
+                title={unsupported ? "Crossword puzzles aren't available for Chinese texts" : undefined}
                 onClick={() => generate(t.key)}
               >
-                {loadingType === t.key ? "Generating..." : done ? `✓ ${t.label}` : `Generate ${t.label}`}
+                {loadingType === t.key
+                  ? "Generating..."
+                  : unsupported
+                  ? `${t.label} (unavailable)`
+                  : done
+                  ? `✓ ${t.label}`
+                  : `Generate ${t.label}`}
               </button>
             );
           })}
@@ -541,8 +548,15 @@ function App() {
   return (
     <div className="shell">
       <header className="top">
-        <h1>Language Quiz</h1>
-        <p>Paste a text, pick an AI provider, and practice with four kinds of exercises.</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div>
+            <h1>Language Quiz</h1>
+            <p>Paste a text, pick an AI provider, and practice with four kinds of exercises.</p>
+          </div>
+          {text && (
+            <button className="secondary" onClick={() => setText(null)}>← Home</button>
+          )}
+        </div>
       </header>
       {!text ? <TextForm onCreated={setText} /> : <StudySession text={text} />}
     </div>
